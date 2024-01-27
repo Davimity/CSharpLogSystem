@@ -29,7 +29,6 @@ public class LogManager
             logPath = InitPath();
             writeTime = true;
             writeType = true;
-            writeInitialData = true;
             timeFormat = "HH:mm:ss:ff";
             maxLogsStored = 15;
 
