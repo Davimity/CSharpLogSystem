@@ -1,100 +1,66 @@
-# Unity Log System (ULS)
+# C# Log System (CLS)
 
-The LogManager Unity Logger is a versatile logging system designed for Unity projects, allowing developers to easily log messages to a file with customizable options. This README provides an overview of the LogManager, its features, and how to use it effectively in your Unity projects.
+[Readme en Español](./README.es.md)
+
+The C# Log System (CLS) is a versatile logging system designed for C# projects. It allows developers to easily log messages to a file with various customization options. This README provides an overview of the LogManager, its features, and how to effectively use this tool in your projects.
 
 # Table of Contents
 
 1. Overview
-2. Features
-3. Usage
+2. Usage
    
-    · Basic Usage
+    · Basic usage
 
     · Customization
-  
-4. Modifications
-5. Understanding the Code
+   
+3. Understanding the Code
 
 # 1. Overview
 
-To use the LogManager Unity Logger in your project, follow these simple steps:
+To use CLS in your project, follow these simple steps:
 
-1. Create LogManager Object: Instantiate a LogManager object in your project to handle logging operations.
-2. Log Messages: Log messages using the Write method with the desired severity level.
-3. Customize Options: Customize the behavior of the logging system by modifying constructor parameters.
+1. Create a LogManager object: Instantiate a LogManager in your project to handle operations. This is useful as it allows multiple LogManager instances in the same code, each able to write to a different file or even write to the same file with different options. To create a LogManager object:
 
-# 2. Features
+```
+LogManager manejador1 = new LogManager();
+LogManager manejador2 = new LogManager();
 
-· Flexible Logging: Log messages with different severity levels using the Write method.
+//This creates 2 independent LogManager instances, allowing configuration modifications from here.
+```
 
-· Customizable Options: Control the logging system behavior with options for time stamps, log types, and more.
+2. Register messages: Use the Write() method to write to your file:
 
-· System Information: Automatically include system information in the initial log for debugging context.
+```
+LogManager manejador = new LogManager();
+manejador.Write("This is a Log!");
+```
 
-· Thread-Safe: Designed to handle concurrent access from multiple threads for safe logging operations.
+3. Customization options: Customize the behavior of the logging system by modifying certain parameters.
 
-· Automatic Log Cleanup: Automatically remove old log files to prevent storage bloat and maintain performance.
+# 2. Usage
 
-# 3. Usage
+  # · Basic Usage
 
-  # · Basic usage
-   ```
-  // Create LogManager object
+  To understand how to use the LogManager, you must first know the different parameters that can be modified.
   
-  LogManager logger = new LogManager();
-
-  // Log an info message
+  · logPath: a string that stores the path where logs will be stored within your system. IMPORTANT: it must include the file name, for example: C:\Users\user\AppData\LocalLow\Davimity\OpenPass\logs
   
-  logger.Write("This is an info message.", LogManager.type.INFO);
-
-  // Log a warning message
+  · writeTime: a bool indicating whether the exact time of each log entry should be written to the file.
   
-  logger.Write("This is a warning message.", LogManager.type.WARNING);
-
-  // Add more log messages as needed
-  ```
-  # · Customization
-  ```
-  // Customize LogManager options
+  · writeType: a bool indicating whether the log type should be written for each log entry.
   
-  LogManager logger = new LogManager(
+  · timeFormat: a string allowing you to specify the text format in which you want to express the time written alongside each log entry in the file if writeTimer is true.
   
-    logPath,       // Specify log file path (including the log name)
-    
-    writeTime,     // Enable/disable writing time stamps on every line
-    
-    writeType,     // Enable/disable writing log types on every line
-    
-    writeInitialData, // Enable/disable writing initial system data
-    
-    timeFormat,    // Specify time stamp format
-    
-    maxLogsStored  // Specify maximum amount of logs files stored
-    
-  );
-  ```
-# 4. Modifications
+  · maxLogsStores: a uint that aims to regulate the number of log files that can exist in the selected log folder, with the goal of not storing a large number of logs and occupying too much space. This can be modified at any time.
+  
+  · type: an enum that stores the log types that can exist, by default {INFO, WARNING, ERROR, FATAL} but types can be added or removed as desired.
 
-To modify the behavior of the LogManager Unity Logger, adjust the constructor parameters to fit your requirements. Possible modifications include:
+# 3. Understanding the Code
 
-· Adding additional log types by modifying the type enum.
+To be able to modify the tool to your liking, it is necessary to understand how it works. When creating a LogManager object, you can either specify nothing or specify multiple options in its constructor. To know which ones can be modified, it is recommended to look at the CLS code. Once the LogManager is created, besides using getters and setters to read or modify configurations, the only thing you can do is execute the Write(string) method.
 
-· Changing the default log path or file naming conventions.
+The Write(string) method receives a string parameter that will be the information written in a new log entry within the log file. But it is not written directly; instead, it is inserted into a queue, so that if for any reason multiple log entries are accumulated to be written in the queue at some point, they will all be written with a single StreamWriter without the need to open several, saving time.
 
-· Modifying the time stamp format or other log message formatting.
+THIS TOOL IS EASILY USABLE IN UNITY AND IS PREPARED FOR IT.
 
-# 4. Undertanding the code
-
-The LogManager Unity Logger code is designed for easy understanding and modification. Here's an overview of how it works:
-
-· Initialization: The LogManager initializes by creating a log file with system information if specified.
-
-· Logging: Messages are logged using the Write method, formatting the message and adding it to the log queue.
-
-· Queue Management: The log queue is managed using thread-safe locking for safe access from multiple threads.
-
-· Log Writing: Log messages are written to the log file, either immediately or when the log queue reaches a certain size.
-
-· Automatic Cleanup: Old log files are automatically removed to prevent storage bloat and maintain performance.
-
-Feel free to explore the code and make modifications to fit your project's needs. If you have any questions or encounter issues, don't hesitate to seek assistance. Happy logging! 📝🚀
+Feel free to explore the code, modify it to fit your project. If you have any questions or find any errors, do not hesitate to ask for help. Happy logging! 📝🚀
