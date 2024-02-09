@@ -8,94 +8,141 @@ public class UnityLogManager
 {
     #region variables
 
-        private readonly static string startMoment = System.DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+    private readonly static string startMoment = System.DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+    private static uint maxLogsStored = 15; // <== Maximum logs stored in the log file     
 
-        public enum type {INFO, WARNING, ERROR, FATAL}; // <== IF YOU WANT MORE TYPE, MODIFY THIS
+    public enum type { INFO, WARNING, ERROR, FATAL }; // <== IF YOU WANT MORE TYPE, MODIFY THIS
 
-        private readonly string logPath;
-        private readonly bool writeTime;
-        private readonly bool writeType;
-        private readonly string timeFormat;
-        private readonly uint maxLogsStored;
+    private string logPath; // <== PATH OF THE LOG FILE (including logName.log)
+    private bool writeTime; // <== If true, every log will have the time of the log in the format specified in timeFormat
+    private bool writeType; // <== If true, every log will have the type of the log, unless you specify it in the Write method
+    private string timeFormat; // <== Format of the time in the log
 
-        private bool isWriting = false;
-        private Queue<string> logQueue = new Queue<string>();
+    private Queue<string> logQueue = new Queue<string>(); // <== Queue of logs to write
 
     #endregion
 
     #region constructors
 
-        public LogManager() { 
-            logPath = InitPath();
-            writeTime = true;
-            writeType = true;
-            timeFormat = "HH:mm:ss:ff";
-            maxLogsStored = 15;
+    /// <summary> Creates a LogManager with default values, if nothing is specified, initial data will be written to the log file.</summary>
+    /// <param name="writeInitialData">Boolean that specifies if the initial data will be written or not to the lof file.</param>
+    public UnityLogManager(bool writeInitialData = false)
+    {
+        logPath = InitPath();
+        writeTime = true;
+        writeType = true;
+        timeFormat = "HH:mm:ss:ff";
+        maxLogsStored = 15;
 
-            WriteInitialData();
-        }
-        public LogManager(string logPath, bool writeTime, bool writeType, bool writeInitialData, string timeFormat, uint maxLogsStored)
-        {
-            this.logPath = logPath == null || !IsPathValid(logPath) ? InitPath() : logPath;
-            this.writeTime = writeTime;
-            this.writeType = writeType;
-            this.timeFormat = IsValidTimeFormat(timeFormat) ? timeFormat : "HH:mm:ss:ff";
-            this.maxLogsStored = maxLogsStored > 2 ? maxLogsStored : 15;
+        if (writeInitialData) WriteInitialData();
+    }
 
-            if (writeInitialData) WriteInitialData();
-        }
+    /// <summary> Creates a LogManager with specified values</summary>
+    /// <param name="logPath">Path of the log file (including log name and extension)</param>
+    /// <param name="maxLogsStored">Maximum logs stored in the log file</param>
+    /// <param name="timeFormat">Format of the time in the log. Ex.: HH:mm:ss:ff</param>
+    /// <param name="writeInitialData">Boolean that specifies if the initial data will be written or not to the lof file.</param>
+    /// <param name="writeTime">If true, every log will have the time of the log in the format specified in timeFormat</param>    
+    /// <param name="writeType">If true, every log will have the type of the log, unless you specify it in the Write method</param>
+    public UnityLogManager(string logPath, bool writeTime = true, bool writeType = true, bool writeInitialData = true, string timeFormat = "HH:mm:ss:ff")
+    {
+        this.logPath = logPath == null || !IsPathValid(logPath) ? InitPath() : logPath;
+        this.writeTime = writeTime;
+        this.writeType = writeType;
+        this.timeFormat = IsValidTimeFormat(timeFormat) ? timeFormat : "HH:mm:ss:ff";
+
+        if (writeInitialData) WriteInitialData();
+    }
+
+    #endregion
+
+    #region getters
+
+    public string getLogPath() => logPath;
+    public bool getWriteTime() => writeTime;
+    public bool getWriteType() => writeType;
+    public string getTimeFormat() => timeFormat;
+    public static uint getMaxLogsStored() => maxLogsStored;
+
+    #endregion
+
+    #region setters
+
+    public void setLogPath(string logPath)
+    {
+        if (IsPathValid(logPath)) this.logPath = logPath;
+        else throw new Exception("Invalid path for the log.");
+    }
+    public void setWriteTime(bool writeTime) => this.writeTime = writeTime;
+    public void setWriteType(bool writeType) => this.writeType = writeType;
+    public void setTimeFormat(string timeFormat)
+    {
+        if (IsValidTimeFormat(timeFormat)) this.timeFormat = timeFormat;
+        else throw new Exception("Invalid time format.");
+    }
+    public static void setMaxLogsStored(uint _maxLogsStored) => maxLogsStored = _maxLogsStored > 2 ? _maxLogsStored : maxLogsStored;
 
     #endregion
 
     #region methods
 
-    public void Write(string info, type type){
+    /// <summary> Writes a log to the log file</summary>
+    /// <param name="info">Information to write to the log file</param>
+    /// <param name="obeyWriteTime">If true, log will obey the writeTime var, but if false the log will do the opposite of what writeTime says</param>
+    /// <param name="obeyWriteType">If true, log will obey the writeType var, but if false the log will do the opposite of what writeType says</param>
+    /// <param name="type">Type of the log</param>
+    public void Write(string info, type type, bool obeyWriteTime = true, bool obeyWriteType = true)
+    {
         string text = "";
 
-        if (writeTime) text += $"[{System.DateTime.Now.ToString(timeFormat)}]";
-        if (writeType) text += $"[{type.ToString()}]";
+        if (!(writeTime ^ obeyWriteTime)) text += $"[{System.DateTime.Now.ToString(timeFormat)}]";
+        if (!(writeType ^ obeyWriteType)) text += $"[{type.ToString()}]";
 
         text += $" {info}";
-
         AddToQueue(text);
     }
 
-    private void AddToQueue(string info){
-        lock (logQueue){
-            logQueue.Enqueue(info);
-        }
-
+    /// <summary>Add a log to the log queue. If there are multiple logs in the queue, everything will be written with the same StreamWriter.</summary>ç
+    /// <param name="info">Information to write to the log file</param>
+    private void AddToQueue(string info)
+    {
+        lock (logQueue) logQueue.Enqueue(info);
         WriteLog();
     }
-    private void WriteLog(){
-        if (!Directory.Exists(logPath)){
-            try{ 
+
+    /// <summary>Writes all logs in the queue to the log file</summary>
+    private void WriteLog()
+    {
+        if (!Directory.Exists(logPath))
+        {
+            try
+            {
                 Directory.CreateDirectory(Path.GetDirectoryName(logPath));
                 EnsureMaxLogs();
             }
-            catch (Exception e){
-                Debug.LogError($"Error creating log directory: {e.Message}");
-                return;
+            catch (Exception e)
+            {
+                throw new Exception($"Error creating log directory: {e.Message}");
             }
         }
 
-        isWriting = true;
         StreamWriter writer = null;
 
-        try{
+        try
+        {
             writer = new StreamWriter(logPath, true);
 
-            lock (logQueue){
+            lock (logQueue)
+            {
                 foreach (string log in logQueue) writer.WriteLine(log);
                 logQueue.Clear();
             }
         }
-        catch (Exception e){ Debug.LogError($"Error writing to log file: {e.Message}"); }
-        finally{
-            if (writer != null) writer.Close();
-            isWriting = false;
-        }
+        catch (Exception e) { throw new System.Exception($"Error writing to log file: {e.Message}"); }
+        finally { if (writer != null) writer.Close(); }
     }
+
+    /// <summary>Deletes the excedent log files</summary>
     private void EnsureMaxLogs()
     {
         string[] logFiles = Directory.GetFiles(Path.GetDirectoryName(logPath), "*.log");
@@ -110,6 +157,8 @@ public class UnityLogManager
             File.Delete(fileToDelete.FullName);
         }
     }
+
+    /// <summary>Writes the initial data to the log file</summary>
     private void WriteInitialData()
     {
         //IF YOU WANT TO MODIFY THE INITIAL DATA OF THE LOG, WRITE OR DELETE TEXT HERE
@@ -160,22 +209,31 @@ public class UnityLogManager
 
         Write(initialData, type.INFO);
     }
-    private bool IsValidTimeFormat(string timeFormat){
+
+    /// <summary>Check if a given time format string is valid or not.</summary>
+    /// <param name="timeFormat">Time format string</param>
+    /// <returns>true if the timeFormat parameter is a valid timeFormat, false otherwise.</returns>
+    private bool IsValidTimeFormat(string timeFormat)
+    {
         DateTime now = DateTime.Now;
         string formattedTime = "";
-        try{
+        try
+        {
             formattedTime = now.ToString(timeFormat);
             return true;
         }
-        catch (FormatException){
-            return false;
-        }
+        catch (FormatException) { return false; }
     }
-    private bool IsPathValid(string path){
+
+    /// <summary>Check if a given path is valid or not.</summary>
+    private bool IsPathValid(string path)
+    {
         if (!Path.IsPathRooted(path)) return false;
         string directory = Path.GetDirectoryName(path);
         return Directory.Exists(directory);
     }
+
+    /// <summary>Initializes the path of the log file</summary>
     private string InitPath() => $"{Application.persistentDataPath}/logs/{startMoment}.log"; // <== IF YOU WANT TO MODIFY THE PATH OF YOUR LOGS OT THE NAME, MODIFY THIS.
 
     #endregion
